@@ -12,6 +12,7 @@ from keras.models import Sequential
 from keras.layers.core import Dense, Activation, Flatten
 from keras.layers.convolutional import Convolution2D
 from keras.layers.pooling import MaxPooling2D
+from keras.callbacks import ModelCheckpoint
 
 data_dir = '{}/Desktop/local_test'.format(os.environ['HOME'])
 training_set_file = '{}/training_set.csv'.format(data_dir)
@@ -104,11 +105,17 @@ if __name__ == '__main__':
 
     model.add(Dense(1))
 
+    # checkpoint
+    filepath = "weights-improvement-{epoch:02d}-{val_loss:.2f}.h5"
+    checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
+    callbacks_list = [checkpoint]
+
     model.compile(loss='mae', optimizer='adam')
     history_object = model.fit_generator(train_generator,
                                          samples_per_epoch=len(train_samples),
                                          validation_data=validation_generator,
                                          nb_val_samples=len(validation_samples),
+                                         callbacks=callbacks_list,
                                          nb_epoch=epoch_num, verbose=1)
 
     print(history_object.history.keys())
@@ -120,4 +127,4 @@ if __name__ == '__main__':
     plt.legend(['training set', 'validation set'], loc='upper right')
     plt.savefig('loss.pdf')
 
-    model.save(model_file)
+   # model.save(model_file)
