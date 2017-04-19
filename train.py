@@ -21,8 +21,27 @@ learning_rate = 0.01 # not used yet
 epoch_num = 10
 model_file = 'my_model.h5'
 previous_model = 'previous.h5'
-pre_load_weights = True
+pre_load_weights = False
 default_batch_size = 256
+correction = 0.0
+default_correction = 0.2
+
+
+def aug_img(file, angel):
+    # left + correction
+    if file.startswith("left"):
+        return angel + correction
+    # right - correction
+    elif file.startswith("right"):
+        return angel - correction
+    # flipped left - correction
+    elif file.startswith("flipped_left"):
+        return -(-(angel - default_correction) + default_correction + correction)
+    # flipped right - correction
+    elif file.startswith("flipped_right"):
+        return -(-(angel + default_correction) - default_correction - correction)
+    else:
+        return angel
 
 
 def generator(samples, batch_size=32):
@@ -35,9 +54,13 @@ def generator(samples, batch_size=32):
             images = []
             angles = []
             for batch_sample in batch_samples:
-                name = '{}/{}'.format(img_folder, batch_sample[0])
+                img_file = batch_sample[0]
+                name = '{}/{}'.format(img_folder, img_file)
                 image = cv2.imread(name)
                 angle = float(batch_sample[1])
+                angle = aug_img(img_file, angle)
+                # print(img_file)
+                # print(angle)
                 images.append(image)
                 angles.append(angle)
 
