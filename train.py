@@ -20,6 +20,8 @@ img_folder = '{}/IMG'.format(data_dir)
 learning_rate = 0.01 # not used yet
 epoch_num = 10
 model_file = 'my_model.h5'
+previous_model = 'previous.h5'
+pre_load_weights = True
 default_batch_size = 256
 
 
@@ -105,6 +107,11 @@ if __name__ == '__main__':
 
     model.add(Dense(1))
 
+    # pre-load weights
+    if pre_load_weights:
+        print("load previous weights")
+        model.load_weights(previous_model)
+
     # checkpoint
     filepath = "weights-improvement-{epoch:02d}-{val_loss:.2f}.h5"
     checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
@@ -127,4 +134,4 @@ if __name__ == '__main__':
     plt.legend(['training set', 'validation set'], loc='upper right')
     plt.savefig('loss.pdf')
 
-   # model.save(model_file)
+    model.save(model_file)
