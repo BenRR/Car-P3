@@ -14,37 +14,48 @@ from keras.layers.convolutional import Convolution2D
 from keras.layers.pooling import MaxPooling2D
 from keras.callbacks import ModelCheckpoint
 
+# data location and training set
+# training set assumed in csv file with 2 columns
+# img_file_without_path,steering_angel
+# use data_augment.py to generate training set
 data_dir = '{}/Desktop/local_test'.format(os.environ['HOME'])
 training_set_file = '{}/training_set.csv'.format(data_dir)
 img_folder = '{}/IMG'.format(data_dir)
-learning_rate = 0.01 # not used yet
-epoch_num = 10
+
+# model files and if load previous model
 model_file = 'my_model.h5'
 previous_model = 'previous.h5'
 pre_load_weights = False
+
+# hyper-parameters
+epoch_num = 10
 default_batch_size = 256
-correction = 0.0
-default_correction = 0.2
+default_validation_size = 0.4
+default_drop_out_rate = 0.5
+# more correction for multi-cam if needed
+more_correction = 0.0
 
 
+# add correction if default 0.2 is not enough
 def aug_img(file, angel):
-    # left + correction
+    # left
     if file.startswith("left"):
-        return angel + correction
-    # right - correction
+        return angel + more_correction
+    # right
     elif file.startswith("right"):
-        return angel - correction
-    # flipped left - correction
+        return angel - more_correction
+    # flipped left
     elif file.startswith("flipped_left"):
-        return -(-(angel - default_correction) + default_correction + correction)
-    # flipped right - correction
+        return -(-angel + more_correction)
+    # flipped right
     elif file.startswith("flipped_right"):
-        return -(-(angel + default_correction) - default_correction - correction)
+        return -(-angel - more_correction)
     else:
         return angel
 
 
-def generator(samples, batch_size=32):
+# generator
+def generator(samples, batch_size=default_batch_size):
     num_samples = len(samples)
     while 1: # Loop forever so the generator never terminates
         random.shuffle(samples)
@@ -59,12 +70,9 @@ def generator(samples, batch_size=32):
                 image = cv2.imread(name)
                 angle = float(batch_sample[1])
                 angle = aug_img(img_file, angle)
-                # print(img_file)
-                # print(angle)
                 images.append(image)
                 angles.append(angle)
 
-            # trim image to only see section with road
             X_train = np.array(images)
             y_train = np.array(angles)
             yield sklearn.utils.shuffle(X_train, y_train)
@@ -76,7 +84,7 @@ if __name__ == '__main__':
         for line in reader:
             samples.append(line)
 
-    train_samples, validation_samples = train_test_split(samples, test_size=0.4)
+    train_samples, validation_samples = train_test_split(samples, test_size=default_validation_size)
 
     print(len(train_samples))
     print(len(validation_samples))
@@ -87,6 +95,8 @@ if __name__ == '__main__':
 
     # nvidia self-driving car model
     model = Sequential()
+
+    # trim img
     model.add(Cropping2D(cropping=((50, 20), (0, 0)), input_shape=(160, 320, 3)))
 
     # Preprocess incoming data, centered around zero with small standard deviation
@@ -94,67 +104,70 @@ if __name__ == '__main__':
     model.add(BatchNormalization())
 
     # Nvidia model
+    # Conv layer with elu activation and max pooling
     model.add(Convolution2D(24, 5, 5, border_mode='same'))
     model.add(Activation('elu'))
     model.add(MaxPooling2D(pool_size=(5, 5)))
     model.add(BatchNormalization())
 
+    model.add(Dropout(default_drop_out_rate))
+
+    # Conv layer with elu activation and max pooling
     model.add(Convolution2D(36, 5, 5, border_mode='same'))
     model.add(Activation('elu'))
     model.add(MaxPooling2D(pool_size=(5, 5)))
     model.add(BatchNormalization())
 
+    model.add(Dropout(default_drop_out_rate))
+
+    # Conv layer with elu activation and max pooling
     model.add(Convolution2D(48, 3, 3, border_mode='same'))
     model.add(Activation('elu'))
     model.add(MaxPooling2D(pool_size=(3, 3), border_mode='same'))
     model.add(BatchNormalization())
 
+    model.add(Dropout(default_drop_out_rate))
+
+    # Conv layer with elu activation and max pooling
     model.add(Convolution2D(64, 3, 3, border_mode='same'))
     model.add(Activation('elu'))
     model.add(MaxPooling2D(pool_size=(3, 3), border_mode='same'))
     model.add(BatchNormalization())
 
     model.add(Flatten())
-    model.add(Dropout(0.5))
+    model.add(Dropout(default_drop_out_rate))
+
+    # FC layer with elu activation
     model.add(Dense(1164))
     model.add(Activation('elu'))
 
+    # FC layer with elu activation
     model.add(Dense(100))
     model.add(Activation('elu'))
 
+    # FC layer with elu activation
     model.add(Dense(50))
     model.add(Activation('elu'))
 
+    # FC layer with elu activation
     model.add(Dense(10))
     model.add(Activation('elu'))
 
+    # Output
     model.add(Dense(1))
 
-    # pre-load weights
+    # load other previous model if needed
     if pre_load_weights:
-        print("load previous weights")
+        print("load previous weights!")
         model.load_weights(previous_model)
 
-    # checkpoint
+    # checkpoints. save all models that improve the validation loss
     filepath = "weights-improvement-{epoch:02d}-{val_loss:.2f}.h5"
     checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
     callbacks_list = [checkpoint]
 
+    # use absolute error and adam optimizer
     model.compile(loss='mae', optimizer='adam')
-    history_object = model.fit_generator(train_generator,
-                                         samples_per_epoch=len(train_samples),
-                                         validation_data=validation_generator,
-                                         nb_val_samples=len(validation_samples),
-                                         callbacks=callbacks_list,
-                                         nb_epoch=epoch_num, verbose=1)
 
-    print(history_object.history.keys())
-    plt.plot(history_object.history['loss'])
-    plt.plot(history_object.history['val_loss'])
-    plt.title('model mean squared error loss')
-    plt.ylabel('mean squared error loss')
-    plt.xlabel('epoch')
-    plt.legend(['training set', 'validation set'], loc='upper right')
-    plt.savefig('loss.pdf')
-
+    # save final model
     model.save(model_file)
