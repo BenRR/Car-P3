@@ -47,6 +47,7 @@ def flip(input_dir, input_log_file, output_dir, output_log_file):
                 writer.writerow([new_img_file, measurement])
 
 
+# merge multiple data sets
 def merge(source_folder,source_file, target_folder, target_file):
     with open('{0}/{1}'.format(target_folder,target_file),'a') as target_file_writer:
         writer = csv.writer(target_file_writer)
@@ -64,10 +65,17 @@ if __name__ == '__main__':
         shutil.rmtree(flipped_data_folder)
     if os.path.exists(final_data_folder):
         shutil.rmtree(final_data_folder)
+
+    # create target folders
     os.makedirs(flipped_data_folder + '/IMG')
     os.makedirs(final_data_folder + '/IMG')
 
+    # create multi cam data
     multi_cam(raw_data_folder, multi_cam_file)
+
+    # flip all images to double the training data
     flip(raw_data_folder, multi_cam_file, flipped_data_folder, driving_file)
+
+    # merge all data into the final folder
     merge(raw_data_folder, multi_cam_file, final_data_folder, driving_file)
     merge(flipped_data_folder, driving_file, final_data_folder, driving_file)

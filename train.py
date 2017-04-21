@@ -20,6 +20,8 @@ from keras.callbacks import ModelCheckpoint
 # by default use current directory and assume data file is called training_set.csv
 # image folder is assumed to be IMG under the same folder
 data_dir = os.getcwd()
+
+# use the final folder generated from data_augment
 final_data_folder = '{}/final_data'.format(data_dir)
 training_set_file = '{}/driving_log.csv'.format(final_data_folder)
 img_folder = '{}/IMG'.format(final_data_folder)
