@@ -20,8 +20,9 @@ from keras.callbacks import ModelCheckpoint
 # by default use current directory and assume data file is called training_set.csv
 # image folder is assumed to be IMG under the same folder
 data_dir = os.getcwd()
-training_set_file = '{}/training_set.csv'.format(data_dir)
-img_folder = '{}/IMG'.format(data_dir)
+final_data_folder = '{}/final_data'.format(data_dir)
+training_set_file = '{}/driving_log.csv'.format(final_data_folder)
+img_folder = '{}/IMG'.format(final_data_folder)
 
 # model files and if load previous model
 model_file = 'my_model.h5'
@@ -32,7 +33,6 @@ pre_load_weights = False
 epoch_num = 10
 default_batch_size = 256
 default_validation_size = 0.4
-default_drop_out_rate = 0.5
 # more correction for multi-cam if needed
 more_correction = 0.0
 
@@ -89,6 +89,9 @@ if __name__ == '__main__':
 
     print(len(train_samples))
     print(len(validation_samples))
+
+    # dropout rate
+    default_drop_out_rate = 0.5
 
     # compile and train the model using the generator function
     train_generator = generator(train_samples, batch_size=default_batch_size)
@@ -169,6 +172,14 @@ if __name__ == '__main__':
 
     # use absolute error and adam optimizer
     model.compile(loss='mae', optimizer='adam')
+
+    # train model
+    model.fit_generator(train_generator,
+                        samples_per_epoch=len(train_samples),
+                        validation_data=validation_generator,
+                        nb_val_samples=len(validation_samples),
+                        callbacks=callbacks_list,
+                        nb_epoch=epoch_num, verbose=1)
 
     # save final model
     model.save(model_file)
