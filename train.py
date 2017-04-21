@@ -4,7 +4,6 @@ import cv2
 import numpy as np
 import sklearn
 import random
-import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from keras.layers.normalization import BatchNormalization
 from keras.layers import Cropping2D, Dropout, Lambda
@@ -18,7 +17,9 @@ from keras.callbacks import ModelCheckpoint
 # training set assumed in csv file with 2 columns
 # img_file_without_path,steering_angel
 # use data_augment.py to generate training set
-data_dir = '{}/Desktop/local_test'.format(os.environ['HOME'])
+# by default use current directory and assume data file is called training_set.csv
+# image folder is assumed to be IMG under the same folder
+data_dir = os.getcwd()
 training_set_file = '{}/training_set.csv'.format(data_dir)
 img_folder = '{}/IMG'.format(data_dir)
 
