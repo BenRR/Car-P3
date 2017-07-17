@@ -11,7 +11,7 @@ from keras.models import Sequential
 from keras.layers.core import Dense, Activation, Flatten
 from keras.layers.convolutional import Convolution2D
 from keras.layers.pooling import MaxPooling2D
-from keras.callbacks import ModelCheckpoint
+from keras.callbacks import ModelCheckpoint, TensorBoard
 
 # data location and training set
 # training set assumed in csv file with 2 columns
@@ -101,64 +101,45 @@ if __name__ == '__main__':
 
     # nvidia self-driving car model
     model = Sequential()
-
-    # trim img
+    # region of interest
     model.add(Cropping2D(cropping=((50, 20), (0, 0)), input_shape=(160, 320, 3)))
-
     # Preprocess incoming data, centered around zero with small standard deviation
     model.add(Lambda(lambda x: x / 127.5 - 1.))
     model.add(BatchNormalization())
 
-    # Nvidia model
-    # Conv layer with elu activation and max pooling
-    model.add(Convolution2D(24, 5, 5, border_mode='same'))
-    model.add(Activation('elu'))
+    # Conv layer with elu activation, max pooling, batch normalization and drop out
+    model.add(Convolution2D(24, 5, 5, border_mode='same', activation='elu'))
     model.add(MaxPooling2D(pool_size=(5, 5)))
     model.add(BatchNormalization())
-
     model.add(Dropout(default_drop_out_rate))
-
     # Conv layer with elu activation and max pooling
-    model.add(Convolution2D(36, 5, 5, border_mode='same'))
-    model.add(Activation('elu'))
-    model.add(MaxPooling2D(pool_size=(5, 5)))
+    model.add(Convolution2D(36, 5, 5, border_mode='same', activation='elu'))
     model.add(BatchNormalization())
-
     model.add(Dropout(default_drop_out_rate))
-
     # Conv layer with elu activation and max pooling
-    model.add(Convolution2D(48, 3, 3, border_mode='same'))
-    model.add(Activation('elu'))
+    model.add(Convolution2D(48, 3, 3, border_mode='same', activation='elu'))
     model.add(MaxPooling2D(pool_size=(3, 3), border_mode='same'))
     model.add(BatchNormalization())
-
     model.add(Dropout(default_drop_out_rate))
-
     # Conv layer with elu activation and max pooling
-    model.add(Convolution2D(64, 3, 3, border_mode='same'))
-    model.add(Activation('elu'))
+    model.add(Convolution2D(64, 3, 3, border_mode='same', activation='elu'))
     model.add(MaxPooling2D(pool_size=(3, 3), border_mode='same'))
     model.add(BatchNormalization())
+    model.add(Dropout(default_drop_out_rate))
+    # Conv layer with elu activation and max pooling
+    model.add(Convolution2D(64, 3, 3, border_mode='same', activation='elu'))
+    model.add(BatchNormalization())
+    model.add(Dropout(default_drop_out_rate))
 
+    # FC layer with elu activation
     model.add(Flatten())
-    model.add(Dropout(default_drop_out_rate))
-
+    model.add(Dense(1164, activation='elu'))
     # FC layer with elu activation
-    model.add(Dense(1164))
-    model.add(Activation('elu'))
-
+    model.add(Dense(100, activation='elu'))
     # FC layer with elu activation
-    model.add(Dense(100))
-    model.add(Activation('elu'))
-
+    model.add(Dense(50, activation='elu'))
     # FC layer with elu activation
-    model.add(Dense(50))
-    model.add(Activation('elu'))
-
-    # FC layer with elu activation
-    model.add(Dense(10))
-    model.add(Activation('elu'))
-
+    model.add(Dense(10, activation='elu'))
     # Output
     model.add(Dense(1))
 
@@ -170,7 +151,8 @@ if __name__ == '__main__':
     # checkpoints. save all models that improve the validation loss
     filepath = "weights-improvement-{epoch:02d}-{val_loss:.2f}.h5"
     checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
-    callbacks_list = [checkpoint]
+    tb = TensorBoard(log_dir='graph', histogram_freq=0, write_graph=True, write_images=True)
+    callbacks_list = [checkpoint, tb]
 
     # use absolute error and adam optimizer
     model.compile(loss='mae', optimizer='adam')
